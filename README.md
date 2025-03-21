@@ -1,275 +1,306 @@
-# FlexRIC
+# xDiff: Online Diffusion Model for Collaborative Inter-Cell Interference Management in O-RAN
+Open Radio Access Network (O-RAN) is a key architectural paradigm for 5G and beyond cellular networks, enabling the adoption of intelligent and efficient resource management solutions. Meanwhile, diffusion models have demonstrated remarkable capabilities in image and video generation, making them attractive for network optimization tasks. 
 
-This repository contains [O-RAN Alliance](https://www.o-ran.org/) compliant E2 Node Agent emulators, a nearRT-RIC, and xApps written in C/C++ and Python.
-It implements various service models (O-RAN standard KPM v2.01/v2.03/v3.00 and RC v1.03, as well as customized NG/GTP, PDCP, RLC, MAC, SC and TC). 
-Depending on the service model, different encoding schemes have been developed (ASN.1, flatbuffer, plain). 
-The indication data received in the xApp uses as persistence mechanism an sqlite3 database for enabling offline processing applications (e.g., ML/AI). 
-Moreover it supports E2AP v1.01/v2.03/v3.01 for all the SMs.
+In this paper, we propose xDiff, a diffusion-based reinforcement learning (RL) framework for inter-cell interference management (ICIM) in O-RAN. We first formulate ICIM as a resource allocation optimization problem aimed at maximizing a user-defined reward function and then develop an online learning solution by integrating a diffusion model into an RL framework for near-real-time policy generation. Particularly, we introduce a novel metric, preference values, as the policy representation to enable efficient policy-guided resource allocation within O-RAN distributed units (DUs). 
 
-If you want to know more about FlexRIC and its original architecture, you can find more details at: Robert Schmidt, Mikel Irazabal, and Navid Nikaein. 2021.
-FlexRIC: an SDK for next-generation SD-RANs. In Proceedings of the 17th International Conference on emerging Networking EXperiments and Technologies (CoNEXT
-'21). Association for Computing Machinery, New York, NY, USA, 411–425. DOI: https://doi.org/10.1145/3485983.3494870. A pdf copy is available at
-https://bit.ly/3uOXuCV 
+We implement xDiff on a 5G testbed consisting of three cells and a set of smartphones in two small cell scenarios. Experimental results demonstrate that xDiff outperforms state-of-the-art ICIM approaches, highlighting the potential of diffusion models for online optimization of O-RAN.
 
-Below is the list of features available in this version divided per component and per service model:
+## Getting Started
+### Minimum hardware requirements:
+- Laptop/Desktop/Server for OAI CN5G and OAI gNB
+    - Operating System: Ubuntu 22.04 LTS
+    - CPU: 12 cores x86_64 @ 3.5 GHz
+    - RAM: 32 GB
+- [USRP N300](https://www.ettus.com/all-products/USRP-N300/) and [USRP X300](https://www.ettus.com/all-products/x300-kit/) and [USRP B210](https://www.ettus.com/all-products/ub210-kit/)
 
-|      |OAI-5g| SRS-5g | E2 Agent emulator | Near RT-RIC | xApp c/c++ SDK | xApp python SDK| O-RAN standardized|
-|:-----|:-----|:-------|:------------------|:------------|:------------------|:---------------|:--------------|
-| KPM  | Y    | Y      | Y                 | Y | Y  | N              | Y |
-| RC   | Y    | Y      | Y                 | Y | Y  | N              | Y |
-| MAC  | Y    | N      | Y                 | Y | Y  | Y              | N |
-| RLC  | Y    | N      | Y                 | Y | Y  | Y              | N | 
-| PDCP | Y    | N      | Y                 | Y | Y  | Y              | N | 
-| SLICE| N    | N      | Y                 | Y | Y  | Y              | N |
-| TC   | N    | N      | Y                 | Y | Y  | N              | N |
-| GTP  | N    | N      | Y                 | Y | Y  | N              | N |
+### Software reference:
+Our system consists of the configuration of RIC + xApp, 5G O-RAN, and 5G Core. xDiff has developed its own architecture and algorithms based on [Flexric](https://gitlab.eurecom.fr/mosaic5g/flexric), [OAI cn5g](https://gitlab.eurecom.fr/oai/cn5g), and [openairinterface5G](https://gitlab.eurecom.fr/oai/openairinterface5g).
 
-[[_TOC_]]
+## Dependencies and Code Clone
 
-## 1. Installation
+## 1. RIC + xApp Setup (https://github.com/peihaoY/xDiff_Paper)
 
-### 1.1 Install prerequisites
-
-- A *recent* CMake (at least v3.22). 
-
-  On Ubuntu, you might want to use [this PPA](https://apt.kitware.com/) to install an up-to-date version.
-
-- SWIG (at least  v.4.1). 
-
-  We use SWIG as an interface generator to enable the multi-language feature (i.e., C/C++ and Python) for the xApps. Please, check your SWIG version (i.e, `swig
-  -version`) and install it from scratch if necessary as described here: https://swig.org/svn.html or via the code below: 
-  
-  ```bash
-  git clone https://github.com/swig/swig.git
-  cd swig
-  git checkout release-4.1
-  ./autogen.sh
-  ./configure --prefix=/usr/
-  make -j8
-  make install
-  ```
-
-- GCC (gcc-10, gcc-12, or gcc-13)
-
-  gcc-11 is not currently supported.
-
-- Flatbuffer encoding(optional). 
-  
-  We also provide a flatbuffers encoding/decoding scheme as alternative to ASN.1. In case you want to use it, follow the
-  instructions at https://github.com/dvidelabs/flatcc and provide the path for the lib and include when selecting it at `ccmake ..` from the build directory 
-
-### 1.2 Download the required dependencies. 
-
-Below an example of how to install it in ubuntu
+### 1.1 python conv requirement
+1. First, ensure that Python and pip are installed on the target computer. You can check this by running the following commands:
 ```bash
-sudo apt install libsctp-dev python3.8 cmake-curses-gui libpcre2-dev python3-dev
+python --version  # or python3 --version
+pip --version
+```
+If Python is not installed, please download and install it from the official Python website.
+
+2. In the target directory, create and activate a new virtual environment and install dependencies. 
+```bash
+python -m venv myenv  # or python3 -m venv myenv
+# Activate the virtual environment:
+source myenv/bin/activate
+```
+Copy the requirements.txt file to your target computer's directory. Then, install all the dependencies using the following command:
+```bash
+conda env create -f environment.yml
 ```
 
-### 1.3 Clone the FlexRIC project, build and install it. 
 
-* Download the code
+### 1.2 RIC prerequisites
 
-  Check the [release page](https://gitlab.eurecom.fr/mosaic5g/flexric/-/releases) and read the release notes for deciding which release you want to install. You
-  can download directly the code from the web or use git in the following way:
+Please find the CMAKE and SWIG dependencies on the [Flexric website](https://gitlab.eurecom.fr/mosaic5g/flexric).
 
-  ```bash
-  # i.e.: 
-  $ git clone https://gitlab.eurecom.fr/mosaic5g/flexric.git 
-  # i.e. git checkout v1.0.0
-  # There are rolling updates on `dev` branch that we consider unstable before releasing and tagging into master branch.
-  # You can play with new features on dev branch checking it out with $git checkout dev instead of the command below
-  $ git checkout <here put the release tag>
-  
-  ```
+Note: - GCC (gcc-10)      *gcc-11 is not currently supported.
 
-* Build 
+### 1.3 Clone the RIC +xApp code, build and install it. 
 
-  ```bash
-  $ cd flexric && mkdir build && cd build && cmake .. && make -j8 
-  ```
-
-Note:
-
-  Currently available versions:
-  |            |KPM v2.01|KPM v2.03|KPM v3.00|
-  |:-----------|:--------|:--------|:--------|
-  | E2AP v1.01 | Y       | Y       | Y       |
-  | E2AP v2.03 | Y       | Y       | Y       |
-  | E2AP v3.01 | Y       | Y       | Y       |
-
-  By default, FlexRIC will build the nearRT-RIC with E2AP v2.03 and KPM v2.03. If you are interested in other available versions, please, execute this command:
-  ```bash
-  mkdir build && cd build && cmake .. -DE2AP_VERSION=<e2ap_version> -DKPM_VERSION=<kpm_version> && make -j8
-  ```
-
-* Install
-
-  You can install the Service Models (SM) in your computer via:
-  ```bash
-  sudo make install
-  ```
-  By default the service model libraries will be installed in the path `/usr/local/lib/flexric` while the
-  configuration file in `/usr/local/etc/flexric`.
-
-  Note: Command `sudo make install` installs shared libraries that represent Service Models. Each time E2AP or/and KPM versions are modified, this command must be executed afterwards.
-
-  Check that everything went fine running the tests:
-  ```bash
-  ctest -j8 --output-on-failure
-  ```
- 
-## 2. Usage/deployment
-
-### 2.1 Test with emulators
-
-  * Start the nearRT-RIC
-
-    ```bash
-    $ ./build/examples/ric/nearRT-RIC
-    ```
-
-  * Start E2 Node agents
-
-    * gNB-mono
-      ```bash
-      $ ./build/examples/emulator/agent/emu_agent_gnb
-      ```
-    * if CU/DU split is used, start the gNB as follows
-      ```bash
-      $ ./build/examples/emulator/agent/emu_agent_gnb_cu
-      $ ./build/examples/emulator/agent/emu_agent_gnb_du
-      ```
-
-  * Start different xApps
-
-    * start the KPM monitor xApp - measurements stated in [2.1.1 E2SM-KPM](#211-e2sm-kpm)
-      ```bash
-      $ ./build/examples/xApp/c/monitor/xapp_kpm_moni
-      ```
-
-    * start the RC monitor xApp - aperiodic subscription for "UE RRC State Change"
-      ```bash
-      $ ./build/examples/xApp/c/monitor/xapp_rc_moni
-      ```
-
-    * start the RC control xApp - RAN control function "QoS flow mapping configuration" (e.g. creating a new DRB)
-      ```bash
-      $ ./build/examples/xApp/c/kpm_rc/xapp_kpm_rc
-      ```
-
-    * start the (MAC + RLC + PDCP + GTP) monitor xApp
-      ```bash
-      $ ./build/examples/xApp/c/monitor/xapp_gtp_mac_rlc_pdcp_moni
-      ```
-
-  Please, notice that no real UE is connected. Therefore, random values within supported messages are filled.
-
-  Before starting the nearRT-RIC, check that the IP address where your nearRT-RIC will be listening is the desired one at `/usr/local/etc/flexric/flexric.conf`.
-  Infact the default configuration assumes all the components are located in the same localhost. 
-
-  Additionally, feel free to customize your own config files. Here is one example:
-  ```bash
-  $ ./build/examples/emulator/agent/emu_agent_gnb_cu -c ~/flexric1.conf &
-  $ ./build/examples/emulator/agent/emu_agent_gnb_du -c ~/flexric2.conf &
-  ```
-
-  where, flexric1.conf is: 
-  ```
-  [NEAR-RIC]
-  NEAR_RIC_IP = 127.0.0.1
-  [XAPP]
-  DB_PATH = /tmp/
-  DB_NAME = xapp_db1
-  ```
-
-  flexric2.conf is: 
-  ```
-  [NEAR-RIC]
-  NEAR_RIC_IP = 127.0.0.1
-  [XAPP]
-  DB_PATH = /tmp/
-  DB_NAME = xapp_db2
-  ```
-
-It is also interesting to mention, multiple xApps can be run in parallel.
-
-At this point, FlexRIC is working correctly in your computer and you have already tested the multi-agent, multi-xApp and multi-language capabilities. 
-
-The latency that you observe in your monitor xApp is the latency from the E2 Agent to the nearRT-RIC and xApp. In modern computers the latency should be less than 200 microseconds or 50x faster than the O-RAN specified minimum nearRT-RIC latency i.e., (10 ms - 1 sec) range.
-Therefore, FlexRIC is well suited for use cases with ultra low-latency requirements.
-Additionally, all the data received in the xApp is also written to /tmp/xapp_db in case that offline data processing is wanted (e.g., Machine
-Learning/Artificial Intelligence applications). You browse the data using e.g., sqlitebrowser. 
-Please, check the example folder for other working xApp use cases.
-
-### 2.2 Docker (optional step)
-
-  We build regularly FlexRIC using docker files for Ubuntu20 and Ubuntu22. You can find the Dockerfile at:
-  ```bash
-  cd test/docker/
-  ```
-
-## 3. Integration with RAN and example of deployment
-
-### 3.1 Integration with OpenAirInterface 5G RAN
-
-Follow the instructions https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair2/E2AP/README.md
-
-The sequence diagram is represented below:
-
-  ![alt text](fig/4.png)
-
-### 3.2 Integration with srsRAN 5G RAN
-
-Follow the instructions https://docs.srsran.com/projects/project/en/latest/tutorials/source/flexric/source/index.html 
-
-### 3.3 Integration with Keysight RICtest 
-
-The nearRT-RIC has been successfully tested with Keysight's RICtest RAN emulator https://www.keysight.com/us/en/product/P8828S/rictest-ran-intelligent-controller-test-solutions.html, 
-as demonstrated at O-RAN PlugFest Fall 2023. Specifically, the nearRT-RIC with the xApp `flexric/examples/xApp/c/keysight/xapp_keysight_kpm_rc.c` were tested.
-
-### 3.4 (opt) Synchronize clock
-
-Before running the various components (RAN/nearRT-RIC/xApps), you probably want to align the machines' clock. For this aim, you can use `ptp4l` in all the machines
-involved (if you have for example deployed the various components on different hosts)
-
+* Clone code and make install
 ```bash
-sudo ptp4l -m -i InterfaceName #for master
-sudo ptp4l -m -i InterfaceName -s #for slaves
+# Get xDiff_xApp source code
+git clone https://github.com/peihaoY/xDiff_Paper ~/xDiff_xApp  
+# Build RIC
+cd xDiff_xApp && mkdir build && cd build && cmake .. && make -j8 
+# You can install the Service Models (SM) in your computer via:
+sudo make install
 ```
 
-![alt text](fig/2.png)
+## 2. O-RAN/gNB Setup  (https://github.com/peihaoY/xDiff_gnb)
 
-Following make sure that no ntpd, chrondy or timesyncd is running in the system (e.g., `sudo systemctl stop systemd-timesyncd`). 
+### 2.1 5G Core Setup
+
+Please install and configure OAI CN5G as described here: [OAI 5G NR CN tutorial](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/NR_SA_Tutorial_OAI_CN5G.md)
+
+
+
+
+### 2.2 Pre-requisites
+
+Please find the UHD and other requirements on the [OAI gNB tutorial](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/NR_SA_Tutorial_COTS_UE.md).
+
+ <!-- Build UHD from source
+```bash
+sudo apt install -y autoconf automake build-essential ccache cmake cpufrequtils doxygen ethtool g++ git inetutils-tools libboost-all-dev libncurses-dev libusb-1.0-0 libusb-1.0-0-dev libusb-dev python3-dev python3-mako python3-numpy python3-requests python3-scipy python3-setuptools python3-ruamel.yaml
+
+git clone https://github.com/EttusResearch/uhd.git ~/uhd
+cd ~/uhd
+git checkout v4.7.0.0
+cd host
+mkdir build
+cd build
+cmake ../
+make -j $(nproc)
+make test # This step is optional
+sudo make install
+sudo ldconfig
+sudo uhd_images_downloader
+``` -->
+### 2.3 Install and Build xDiff_gNB
 
 ```bash
-sudo phc2sys -m -s InterfaceName -w
+# Get xDiff_ORAN source code
+git clone https://github.com/peihaoY/xDiff_gnb.git ~/xDiff_ORAN
+cd ~/xDiff_gnb
+
+# Install OAI dependencies and build ORAN
+cd ~/xDiff_gnb/cmake_targets
+./build_oai -I
+./build_oai -w USRP --ninja --build-e2 --gNB -C
 ```
 
-![alt text](fig/3.png)
+- Smartphone set up
+The COTS UE can now search for the network. You can find how to connect UE to gNB on [srsRAN website](https://docs.srsran.com/projects/project/en/latest/tutorials/source/cotsUE/source/index.html).
+
+### 2.4 Separate O-CU and  O-DU
+
+Please find how to separate O-CU and  O-DU on [F1AP website](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/F1AP/F1-design.md?ref_type=heads).
 
 
-## 4. Integration with other nearRT-RICs 
+## Modified code structure
+In both the RAN and RIC systems, there are numerous code files involved. Below, I have listed the files that I modified or added as part of implementing xDiff. The structure is as follows. For detailed comments and further information, please refer directly to the code.
 
-### 4.1 O-RAN OSC nearRT-RIC
+### 1. xDiff_xApp
 
-FlexRIC's E2 Agent (and OAI RAN that is embedded on it) has also been successfully tested using O-RAN's OSC nearRT-RIC H Release as shown at https://openairinterface.org/news/openairinterface-will-showcase-3-demos-at-the-o-ran-f2f-meeting-in-phoenix/ and https://openairinterface.org/joint-osc-oai-workshop-end-to-end-open-source-reference-designs-for-o-ran/ 
+```bash
+.
+├── diffusion                        # source code for diffusion policy algrithom
+│   ├── main.py   
+│   ├── env.py              
+    │   agent
+    │   ├── ql_cm
+    │   ├── diffusion
+├── examples                         # xApp for RAN Slicing and information monitor         
+│   ├── ric                          # RIC including E2 interface
+│   └── xApp                         # source code for xApps
+    │   c                            # our xApps based on C code
+        │   ctrl            
+        │   ├── mac_ctrl.c           # test code for mac layer control
+        │   ├── xapp_combin_ctrl.c   # Source code for xDiff
+    │   ├── python3                  # external python code examples for xApps
+├── dudata                         # data storage
+│   ├── KPM_UE.txt             
+│   ├── interference_map.txt         # sent preference value to each DU         
+│   ├── xapp_db_               
+│   ├── kpm.py                       # show KPM data
+│   ├── mac.py                       # show MAC-Layer data
+│   └── rewards.csv            
+```
 
-Follow OSC nearRT-RIC installation guide. The xApp can be found at https://github.com/mirazabal/kpm_rc-xapp. Please, note that we do not give support for the OSC nearRT-RIC.  
+### 2. xDiff_gNB
 
-Recorded presentation at Phoenix, October 2023 (4th minute): https://zoom.us/rec/play/N5mnAQUcEVRf8HN6qLYa4k7kjNq3bK4hQiYqHGv9KUoLfcR6GHiE-GvnmAudT6xccmZSbkxxYHRwTaxk.Zi7d8Sl1kQ6Sk1SH?canPlayFromShare=true&from=share_recording_detail&continueMode=true&componentName=rec-play&originRequestUrl=https%3A%2F%2Fzoom.us%2Frec%2Fshare%2FwiYXulPlAqIIDY_vLPQSGqYIj-e5Ef_UCxveMjrDNGgXLLvEcDF4v1cmVBe8imb4.WPi-DA_dfPDBQ0FH
+```bash
+.
+├── openair2                     
+│   ├── E2AP                                    # source code for E2 interface
+    │   ├── RAN_FUNCTION                   
+        │   ├── CUSTOMIZED                      # monitor functions
+            │   ├── ran_func_mac.c         
+            │   └── ran_func_kpm.c         
+        │   └── O-RAN                           # control service functions
+            │   ├── rc_ctrl_service_style_2.c   # xDiff 
+│   ├── LAYER2                                  # MAC layer funtions
+    │   ├── NR_MAC_gNB                          # MAC scheduler      
+        │   ├── gNB_scheduler_dlsch.c           # source code for downlink mac scheduler
+```
+### 3. Extend xDiff
+If you wish to extend 'xDiff', please review the modification sections and comments in the code above. These will guide you through quickly getting started with implementing your own online learning algorithm in a new xApp.
 
-## 5. Support/further resources
+## Run xDiff
+## 1. On 5G Core server:
+```bash
+cd ~/oai-cn5g
+docker compose up -d
+```
+## 2. On xDiff_gnb server:
 
-* Mailing list: if you need help or have some questions, you can subscribe to the mailing list `techs@mosaic-5g.io` that you can find at
-  https://gitlab.eurecom.fr/mosaic5g/mosaic5g/-/wikis/mailing-lists. The emails are archived and available publicly. 
-* [Demo](DEMO.md) for flexric in July 2022
-* [The Wiki space](https://gitlab.eurecom.fr/mosaic5g/flexric/-/wikis/home) contains tutorials and presentations
-* [Original FlexRIC paper ACM CoNEXT 2021](https://bit.ly/3uOXuCV)
+### 2.1 Run O-CU
+```bash
+cd ~/xDiff_gnb
+sudo cmake_targets/ran_build/build/nr-softmodem --sa -O gnb-cu.sa.band78.106prb.conf
+```
 
-## 6. OAM Project Group & Roadmap
+### 2.1 Run 3 O-DU-O-RU (Cells)
+If you are using the USRP, please directly install and run the following command. If you are using a different model of RU, please modify your device address accordingly.
+```bash
+cd ~/xDiff_gnb
+# USRP N310
+sudo cmake_targets/ran_build/build/nr-softmodem -O gnb-du.sa.band78.fr1.106PRB.2x2.usrpn300.conf --sa --usrp-tx-thread-config 1
+# USRP B210
+sudo cmake_targets/ran_build/build/nr-softmodem -O gnb-du.sa.band78.fr1.106PRB.usrpb210.conf --sa --usrp-tx-thread-config 1  -E --continuous-tx
+# USRP X310
+sudo cmake_targets/ran_build/build/nr-softmodem -O gnb-du.sa.band78.fr1.106PRB.2x2.usrpx300.conf --sa --usrp-tx-thread-config 1 -E --continuous-tx
 
-Check https://openairinterface.org/projects/oam-project-group/
+```
 
-## 7. FlexRIC Milestone
 
-Check on https://gitlab.eurecom.fr/mosaic5g/flexric/-/milestones and in https://openairinterface.org/mosaic5g/
+### 2.2 Check UEs' successfully connected and generate demand:
+You can use the following commands to check the 5G Core's AMF, UPF, and other components.
+```bash
+docker logs oai-amf -f
+docker logs oai-upf -f
+```
+
+Check UEs' information:
+
+<!-- Connection #0 to host 192.168.70.133 left intact
+[2024-09-07 19:34:15.134] [amf_sbt] [info] Get response with HTTP code (200)
+[2024-09-07 19:34:15.134] [amf_sbt] [info] Response body {"upCnxState": "DEACTIVATED"}
+[2024-09-07 19:34:15.134] [amf_app] [debug] Parsing the message with the Simple Parser
+[2024-09-07 19:34:15.134] [amf_sbt] [info] JSON part {"upCnxState": "DEACTIVATED"}
+[2024-09-07 19:34:15.134] [amf_sbt] [debug] UP Deactivation
+[2024-09-07 19:34:15.134] [amf_app] [debug] Trigger process response: Set promise with ID 37 to ready
+[2024-09-07 19:34:15.134] [amf_server] [debug] Got result for PDU Session Id 5
+[2024-09-07 19:34:15.134] [amf_n2] [debug] Removed UE NGAP context with amf_ue_ngap_id 30
+[2024-09-07 19:34:15.134] [amf_n2] [debug] Removed UE NGAP context with ran_ue_ngap_id 6, gnb_id 57344
+[2024-09-07 19:34:15.134] [ngap] [debug] Free NGAP Message PDU -->
+
+```bash
+[2024-09-07 19:34:15.902] [amf_app] [info]
+
+|----------------------gNBs Information:--------------|
+| Index | Status    | Global Id | gNB Name | PLMN     |
+|-------|-----------|-----------|----------|----------|
+| 1     | Connected | 0xE000    | gNB-OAI  | 001,01   |
+|-----------------------------------------------------|
+
+
+|-----------------------------------------------------------UEs Information:-------------------------------------------
+| Index | 5GMM State       | IMSI            | GUTI              | RAN UE NGAP ID | AMF UE NGAP ID | PLMN   | Cell Id   |
+|-------|------------------|-----------------|-------------------|----------------|----------------|--------|-----------|
+| 1     | 5GMM-REGISTERED  | 001010000000001 | 00101010041000003 | 0x03           | 0x1F           | 001,01 | 0xE00000  |
+| 2     | 5GMM-REGISTERED  | 001010000000002 | 00101010041000001 | 0x01           | 0x01           | 001,01 | 0xE00000  |
+| 3     | 5GMM-REGISTERED  | 001010000000003 | 00101010041000006 | 0x06           | 0x06           | 001,01 | 0xE00000  |
+| 4     | 5GMM-REGISTERED  | 001010000000004 | 00101010041000011 | 0x18           | 0x18           | 001,01 | 0xE00000  |
+| 5     | 5GMM-REGISTERED  | 001010000000005 | 00101010041000012 | 0x14           | 0x14           | 001,01 | 0xE00000  |
+| 6     | 5GMM-REGISTERED  | 001010000000006 | 00101010041000010 | 0x04           | 0x04           | 001,01 | 0xE00000  |
+| 7     | 5GMM-REGISTERED  | 001010000000007 | 00101010041000004 | 0x0A           | 0x0A           | 001,01 | 0xE00000  |
+| 8     | 5GMM-REGISTERED  | 001010000000008 | 00101010041000002 | 0x02           | 0x02           | 001,01 | 0xE00000  |
+| 9     | 5GMM-REGISTERED  | 001010000000009 | 00101010041000009 | 0x0A           | 0x0A           | 001,01 | 0xE00000  |
+| 10    | 5GMM-REGISTERED  | 001010000000010 | 00101010041000007 | 0x07           | 0x07           | 001,01 | 0xE00000  |
+------------------------------------------------------------------------------------------------------
+```
+<!-- [2024-09-07 19:34:16.077] [sctp] [info] [Assoc_id 6, Socket 9] Received a message (length 147) from port 50209, on stream 1, PPID 60
+[2024-09-07 19:34:16.077] [ngap] [debug] Handling SCTP payload from SCTP Server on assoc_id (6), stream_id (1), instreams (2), outstreams (2)
+[2024-09-07 19:34:16.077] [ngap] [debug] Decoded NGAP message, procedure code 15, present 1 -->
+You can generate traffic by accessing websites, streaming videos, downloading content, and more through the UE. Additionally, you can create traffic demands using iperf.
+
+Run Iperf on UE to generate demand:
+```bash
+docker exec -it oai-ext-dn bash
+iperf -u -t 86400 -i 1 -fk -B 192.168.70.135 -b 10M -c 10.0.0.2
+```
+## 3. On RIC+xApp server:
+### 3.1 Start the nearRT-RIC
+```bash
+./xDiff_xApp/build/examples/ric/nearRT-RIC
+```
+
+### 3.2 Start xApps
+
+Start the xDiff xApp
+
+```bash
+./xDiff_xApp/build/examples/xApp/c/ctrl/xapp_combin_ctrl
+```
+### 3.3 Start testing our algrithom
+* To evaluate xDiff in your host:
+```bash
+python /xDiff_xApp/diffusion/main.py    # or python3 /xDiff_xApp/diffusion/main.py
+```
+
+* Here is a simple test case:
+```bash
+------------------------------------------------------------
+Env: ICIM_env, state_dim: 30, action_dim: 30
+******************************************************************************************
+Training Start
+
+24-11-22.18:46|[QL|alpha-0.05|eta-1.0|] --------------  -----------
+24-11-22.18:46|[QL|alpha-0.05|eta-1.0|] Trained Epochs  0
+                                        BC Loss         0.28673
+                                        QL Loss         0.044308
+                                        Actor Loss      0.0586445
+                                        Critic Loss     7.39261e-06
+24-11-22.18:46|[QL|alpha-0.05|eta-1.0|] --------------  -----------
+                                        --------------  -----------
+
+```
+
+* Results will be saved in floder [dudata]
+    - dudata/ `KPM_UE.txt`, `interference_map.txt`, `xapp_db_`  
+    Please note that xapp_db_ is a compressed file. Be sure to extract it first before reviewing the contents.
+    - diffusion/ `rewards.csv` 
+
+For example, you can get preference values as following:
+```bash
++------------+-------+-------+-------+-------+-------+-------+-------+
+| RBG index  |   1   |   2   |   3   |   4   |   5   |   6   |
++------------+-------+-------+-------+-------+-------+-------+-------+
+| UE₁ ∈ gNB₁ |  0.49 | -0.82 |  0.76 |  0.55 |  0.26 |  0.81 |
+| UE₂ ∈ gNB₂ | -0.51 | -0.20 | -0.87 | -0.47 | -0.37 |  0.32 |
+| UE₃ ∈ gNB₃ | -0.57 |  0.39 |  0.83 | -0.69 | -0.66 | -0.66 |
++------------+-------+-------+-------+-------+-------+-------+-------+
+```
+
+## Citation
+If you use our code in your research, please cite our paper:
+```bash
+Coming soon...
+```
+
+## Getting help
+
+If you encounter a bug or have any questions regarding the paper, the code or the setup process, please feel free to contact us: phyan@msu.edu
