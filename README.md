@@ -150,7 +150,8 @@ In both the RAN and RIC systems, there are numerous code files involved. Below, 
             │   ├── ran_func_mac.c         
             │   └── ran_func_kpm.c         
         │   └── O-RAN                           # control service functions
-            │   ├── rc_ctrl_service_style_2.c   # xDiff 
+            │   ├── ran_func_rc.h               # get interfarence map
+            │   ├── rc_ctrl_service_style_2.h   # xDiff 
 │   ├── LAYER2                                  # MAC layer funtions
     │   ├── NR_MAC_gNB                          # MAC scheduler      
         │   ├── gNB_scheduler_dlsch.c           # source code for downlink mac scheduler
