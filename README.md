@@ -302,12 +302,14 @@ If you use our code in your research, please cite our paper:
 @article{yan2025xdiff,
   title={xDiff: Online Diffusion Model for Collaborative Inter-Cell Interference Management in 5G O-RAN},
   author={Yan, Peihao and Zeng, Huacheng and Hou, Y Thomas},
-  journal={arXiv preprint arXiv:2508.15843},
-  year={2025}
+  journal={IEEE Transactions on Networking},
+  year={2025},
+  publisher={IEEE}
 }
 ```
 
 ## Getting help
 
 If you encounter a bug or have any questions regarding the paper, the code or the setup process, please feel free to contact us: phyan@msu.edu
+
 
